@@ -1,0 +1,23 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "test-caml-query-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/testCamlQuery/TestCamlQueryWebPart.js",
+          "manifest": "./src/webparts/testCamlQuery/TestCamlQueryWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {
+    "bootstrap": {
+      "path": "https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js",
+      "globalName": "bootstrap"
+    }
+  },
+  "localizedResources": {
+    "TestCamlQueryWebPartStrings": "lib/webparts/testCamlQuery/loc/{locale}.js"
+  }
+}

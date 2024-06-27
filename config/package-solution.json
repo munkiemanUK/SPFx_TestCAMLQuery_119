@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "test-caml-query-client-side-solution",
+    "id": "b58c2a13-25e1-497c-af79-1c1cd66fb050",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.19.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Test_CAML_Query description"
+      },
+      "longDescription": {
+        "default": "Test_CAML_Query description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "test-caml-query Feature",
+        "description": "The feature that activates elements of the test-caml-query solution.",
+        "id": "a81ce182-5975-4855-b914-fe28e4b81f5c",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/test-caml-query.sppkg"
+  }
+}
