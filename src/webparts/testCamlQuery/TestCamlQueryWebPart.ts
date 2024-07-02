@@ -42,86 +42,118 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
         <div>Web part property value: <strong>${escape(this.properties.description)}</strong></div>
       </div>
       <div class="${styles.row}">     
-        <div class="${styles.column}" id="libraryName"></div>
+        <div class="${styles.row}" id="libraryName"></div>
       </div>
     </section>`;
-    this._renderListAsync(); //.then( () => {});
-      //this._libraryListeners();
+
+    //*** check data exists for libraries and display tab buttons */
+    this._getDataAsync(false,"",""); 
   }
 
-  private async _renderListAsync(): Promise<void> {
+  private async _getDataAsync(flag:boolean,library:string,category:string): Promise<void> {
     console.log('renderlistasync');
     const dcDivisions : string[] = ["asm","cen","cnn","emp","hea"];
 
-    this.properties.libraryName = ["Policies", "Procedures","Guides", "Forms", "General"];
+    if(!flag){
+      this.properties.libraryName = ["Policies", "Procedures","Guides", "Forms", "General"];
+    }else{
+      this.properties.libraryName = [library];
+    }
 
-    dcDivisions.forEach(async (site,index)=>{
-      for (let x = 0; x < this.properties.libraryName.length; x++) {
-        this._checkData(x,site,this.properties.libraryName[x],"IPES Wales","")
-          .then((response) => {
-            //console.log("renderlistasync",response);
+    for (let x = 0; x < this.properties.libraryName.length; x++) {
+      dcDivisions.forEach(async (site,index)=>{
+        this._getData(flag,site,this.properties.libraryName[x],"IPES Wales",category)
+          .then(async (response) => {
+            console.log("renderlistasync",response);
             if(response.length>0){
-              this._renderList(this.properties.libraryName[x]).then( ()=> {
-                this._libraryListeners();
-              });
+              if(!flag){
+                await this._renderLibraryTabs(this.properties.libraryName[x]).then( ()=> {
+                  this._setLibraryListeners();
+                });
+              }else{
+                console.log('running other functions');
+              }
             }
           })
           .catch(() => {});
-      }
-    });
-    //return
-    
+      });
+    }
     return;
   }
 
-  private async _checkData(x:number,site:string,library:string,team:string,category:string): Promise<any> {      
+  private async _getData(flag:boolean,site:string,library:string,team:string,category:string): Promise<any> {      
     console.log('checkdata');
 
     const sp = spfi().using(SPFx(this.context)).using(PnPLogging(LogLevel.Warning));  
     const tenant_uri = this.context.pageContext.web.absoluteUrl.split('/',3)[2];
     const dcTitle = site+"_dc";
     const webDC = Web([sp.web,`https://${tenant_uri}/sites/${dcTitle}/`]); 
+    let rowLimitString : string;
     let view: string = "";
     
+    if(!flag){
+      rowLimitString="<RowLimit>10</RowLimit>";
+    }else{
+      rowLimitString="";
+    }
+
     if (category === "") {
       view =
         `<View>
-        <Query>
-          <Where>
-            <Or>
-              <Eq>
-                <FieldRef Name="DC_Team"/>
-                <Value Type="TaxonomyFieldType">${team}</Value>
-              </Eq>
-              <Contains>
-                <FieldRef Name="DC_SharedWith"/>
-                <Value Type="TaxonomyFieldTypeMulti">${team}</Value>
-              </Contains>
-            </Or>
-          </Where>
-        </Query>
-        <RowLimit>10</RowLimit>
+          <Query>
+            <Where>
+              <Or>
+                <Eq>
+                  <FieldRef Name="DC_Team"/>
+                  <Value Type="TaxonomyFieldType">${team}</Value>
+                </Eq>
+                <Contains>
+                  <FieldRef Name="DC_SharedWith"/>
+                  <Value Type="TaxonomyFieldTypeMulti">${team}</Value>
+                </Contains>
+              </Or>
+            </Where>
+            <OrderBy>
+              <FieldRef Name="DC_Division" Ascending="TRUE" />
+              <FieldRef Name="DC_Folder" Ascending="TRUE" />
+              <FieldRef Name="DC_SubFolder01" Ascending="TRUE" />
+              <FieldRef Name="DC_SubFolder02" Ascending="TRUE" />
+              <FieldRef Name="DC_SubFolder03" Ascending="TRUE" />
+              <FieldRef Name="LinkFilename" Ascending="TRUE" />
+            </OrderBy>          
+          </Query>
+          ${rowLimitString}
         </View>`;
     } else {
       view =
         `<View>
-        <Query>
-          <Where>
-            <Or>
-              <Eq>
-                <FieldRef Name="DC_Category"/>
-                <Value Type="TaxonomyFieldType">${category}</Value>
-              </Eq>
-              <Contains>
-                <FieldRef Name="DC_SharedWith"/>
-                <Value Type="TaxonomyFieldTypeMulti">${category}</Value>
-              </Contains>
-            </Or>
-          </Where>
-        </Query>
-        <RowLimit>10</RowLimit>
+          <Query>
+            <Where>
+              <Or>
+                <Eq>
+                  <FieldRef Name="DC_Category"/>
+                  <Value Type="TaxonomyFieldType">${category}</Value>
+                </Eq>
+                <Contains>
+                  <FieldRef Name="DC_SharedWith"/>
+                  <Value Type="TaxonomyFieldTypeMulti">${category}</Value>
+                </Contains>
+              </Or>
+            </Where>
+            <OrderBy>
+              <FieldRef Name="DC_Division" Ascending="TRUE" />
+              <FieldRef Name="DC_Folder" Ascending="TRUE" />
+              <FieldRef Name="DC_SubFolder01" Ascending="TRUE" />
+              <FieldRef Name="DC_SubFolder02" Ascending="TRUE" />
+              <FieldRef Name="DC_SubFolder03" Ascending="TRUE" />
+              <FieldRef Name="LinkFilename" Ascending="TRUE" />
+            </OrderBy>           
+          </Query>
+          ${rowLimitString}
         </View>`;
     }
+
+    //console.log(view);
 
     return webDC.lists.getByTitle(library)
       .getItemsByCAMLQuery({ViewXml:view},"FieldValuesAsText/FileRef", "FieldValueAsText/FileLeafRef")
@@ -132,7 +164,7 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
       .catch(() => {});    
   }
 
-  private async _renderList(library:string): Promise<void> {
+  private async _renderLibraryTabs(library:string): Promise<void> {
     console.log('renderlist');
 
     //const dataTarget:string=library.toLowerCase();
@@ -147,13 +179,62 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
     return;
   }
 
-  private _libraryListeners() : void {
+  private _setLibraryListeners() : void {
     console.log("librarylisteners");
+
     // Appending the `!` operator here
-    const container = document.querySelector('#Guides_btn')!
+    //const container = document.querySelector('#Guides_btn')!
+
+    let timer:any;
+    //const policyElem=document.getElementById("Policies_btn")!
+    const procedureElem=document.getElementById("Procedures_btn")!
+    const guideElem=document.getElementById("Guides_btn")!
+    const formElem=document.getElementById("Forms_btn")!
+    ///const generalElem=document.getElementById("General_btn")!
 
     // TypeScript will not complain about the container being possibly `null`
-    container.addEventListener('click', () => alert('Guides Button clicked'))            
+    //container.addEventListener('click', () => alert('Guides Button clicked')) 
+
+    // *** event listeners for main document libraries
+
+    procedureElem.addEventListener("click", event => { 
+      if(event.detail===1){
+        timer=setTimeout(async () => {
+          alert(`Procedure Button clicked`)
+          this._getDataAsync(true,"Procedures",""); 
+          //await this.getData("Policies",1,"");
+        },100);
+      }
+    });
+    procedureElem.addEventListener("dblclick",event => {
+      clearTimeout(timer);
+    });
+
+    guideElem.addEventListener("click", event => {
+      if(event.detail===1){
+        timer=setTimeout(async () => {
+          alert(`Guides Button clicked`)
+          this._getDataAsync(true,"Guides",""); 
+          //await this.getData("Guides",3,"");
+        },100);
+      }
+    });
+    guideElem.addEventListener("dblclick",event => {
+      clearTimeout(timer);
+    });
+
+    formElem.addEventListener("click", event => { 
+      if(event.detail===1){
+        timer=setTimeout(async () => {
+          alert(`Form Button clicked`)
+          //await this.getData("Policies",1,"");
+        },100);
+      }
+    });
+    formElem.addEventListener("dblclick",event => {
+      clearTimeout(timer);
+    });               
+
   }
 
   public async onInit(): Promise<void> {
