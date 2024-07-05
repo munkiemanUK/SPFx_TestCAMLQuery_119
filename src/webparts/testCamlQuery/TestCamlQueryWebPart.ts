@@ -17,13 +17,15 @@ import "@pnp/sp/lists";
 import { LogLevel, PnPLogging } from "@pnp/logging";
 
 require("bootstrap");
-
+let libCount : number = 0;
 export interface ITestCamlQueryWebPartProps {
   description: string;
   division : string;
   teamTermID : string;
   parentTermID : string;
   libraryName: string[];
+  libraries : string[];
+  libraryNamePrev : string;
 }
 
 export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCamlQueryWebPartProps> {
@@ -32,6 +34,8 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
   private _environmentMessage: string = '';
 
   public async render(): Promise<void> {
+
+    this.properties.libraryNamePrev = "";
 
     this.domElement.innerHTML = `
     <section class="${styles.testCamlQuery} ${!!this.context.sdks.microsoftTeams ? styles.teams : ''}">
@@ -47,11 +51,16 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
     </section>`;
 
     //*** check data exists for libraries and display tab buttons */
-    this._getDataAsync(false,"",""); 
+    await this._getDataAsync(false,"","").then( () =>{
+      setTimeout(async () => {
+        await this._renderlibraryTabsAsync("");
+      }, 1000);      
+    });
   }
 
   private async _getDataAsync(flag:boolean,library:string,category:string): Promise<void> {
-    console.log('renderlistasync');
+    console.log('getDataAsync',flag,library,category);
+
     const dcDivisions : string[] = ["asm","cen","cnn","emp","hea"];
 
     if(!flag){
@@ -64,12 +73,13 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
       dcDivisions.forEach(async (site,index)=>{
         this._getData(flag,site,this.properties.libraryName[x],"IPES Wales",category)
           .then(async (response) => {
-            console.log("renderlistasync",response);
+            console.log("renderlistasync",site,this.properties.libraryName[x],response);
             if(response.length>0){
               if(!flag){
-                await this._renderLibraryTabs(this.properties.libraryName[x]).then( ()=> {
-                  this._setLibraryListeners();
-                });
+                await this._setLibraryTabs(this.properties.libraryName[x]);        
+                //await this._renderLibraryTabs(this.properties.libraryName[x]).then( async ()=> {
+                //  this._setLibraryListeners();
+                //});
               }else{
                 console.log('running other functions');
               }
@@ -90,7 +100,7 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
     const webDC = Web([sp.web,`https://${tenant_uri}/sites/${dcTitle}/`]); 
     let rowLimitString : string;
     let view: string = "";
-    
+        
     if(!flag){
       rowLimitString="<RowLimit>10</RowLimit>";
     }else{
@@ -164,8 +174,36 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
       .catch(() => {});    
   }
 
-  private async _renderLibraryTabs(library:string): Promise<void> {
-    console.log('renderlist');
+  private async _setLibraryTabs(library: string): Promise<void>{
+    console.log("setLibrary",library,this.properties.libraryNamePrev,libCount);
+    
+    if(this.properties.libraryNamePrev !== library){
+      this.properties.libraryNamePrev = library;
+      this.properties.libraries[libCount] = library;
+      libCount++;
+    }
+
+    return;
+  }
+
+  private async _renderlibraryTabsAsync(category:string): Promise<void> {
+    //if(this.properties.libraries !== undefined){
+      this.properties.libraries.sort()
+    //}
+      for(let x=0; x<this.properties.libraries.length;x++){     
+        console.log("libraryTabsAsync",this.properties.libraries[x],x);
+        await this._renderLibraryTabs(this.properties.libraries[x],category).then( async ()=> {
+          this._setLibraryListeners();
+          // *** get custom tabs from termstore and add library column
+          //await this.renderCustomTabsAsync();              
+        });  
+      }
+    
+    return;
+  }
+
+  private async _renderLibraryTabs(library:string,labelName:string): Promise<void> {
+    console.log('renderLibraryTabs');
 
     //const dataTarget:string=library.toLowerCase();
     let html: string = '';
@@ -176,9 +214,9 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
     if(this.domElement.querySelector('#libraryName') !== null){
       this.domElement.querySelector('#libraryName')!.innerHTML += html;
     }
-    return;
+    return;  
   }
-
+  
   private _setLibraryListeners() : void {
     console.log("librarylisteners");
 
@@ -239,6 +277,9 @@ export default class TestCamlQueryWebPart extends BaseClientSideWebPart<ITestCam
 
   public async onInit(): Promise<void> {
     await super.onInit();
+    this.properties.libraries = [];
+    this.properties.libraryName = [];
+
     SPComponentLoader.loadCss("https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css");
     SPComponentLoader.loadCss("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css");
 
